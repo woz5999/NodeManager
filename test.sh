@@ -14,4 +14,4 @@ docker run -d -p 80:80 \
 -e AWS_SECRET_ACCESS_KEY \
 --name node-manager woz5999/node-manager &&
 sleep 2 &&
-docker logs node-manager
+docker logs --follow node-manager

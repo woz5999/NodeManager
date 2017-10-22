@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	log "github.com/sirupsen/logrus"
@@ -54,11 +55,9 @@ func (nm *NodeMan) Watch() {
 
 	handleInterrupt(cancelCtx)
 
-	// init sqs svc
 	sqsSvc := sqs.New(nm.AwsSess)
-
-	// init ec2 svc
 	ec2Svc := ec2.New(nm.AwsSess)
+	asgSvc := autoscaling.New(nm.AwsSess)
 
 	queue := &queue.Queue{
 		SQS:  *sqsSvc,
@@ -71,6 +70,7 @@ func (nm *NodeMan) Watch() {
 			Base:  nm.Base,
 			EC2:   ec2Svc,
 			Queue: queue,
+			ASG:   asgSvc,
 		}
 		log.Infof("Starting thread %s", string(i))
 		err := consumer.Start(initialCtx)

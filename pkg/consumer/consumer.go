@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	log "github.com/sirupsen/logrus"
 	"github.com/woz5999/NodeManager/pkg/constants"
@@ -17,6 +18,7 @@ type Consumer struct {
 	Base  *types.Base
 	EC2   *ec2.EC2
 	Queue *queue.Queue
+	ASG   *autoscaling.AutoScaling
 }
 
 // Start start the worker thread
@@ -70,6 +72,18 @@ func (c Consumer) Start(ctx context.Context) error {
 				if err != nil {
 					log.Error(err.Error())
 				}
+
+				// can't pass constant to func so need read it into a var before passing
+				cont := constants.AsgActionContinue
+
+				// tell the ASG it's ok to proceed with the action
+				_, err = c.ASG.CompleteLifecycleAction(&autoscaling.CompleteLifecycleActionInput{
+					AutoScalingGroupName:  &event.AutoScalingGroupName,
+					LifecycleActionResult: &cont,
+					LifecycleActionToken:  &event.LifecycleActionToken,
+					LifecycleHookName:     &event.LifecycleHookName,
+				})
+
 			case <-ctx.Done():
 				return
 			}

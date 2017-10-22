@@ -24,7 +24,7 @@ func (m Message) Body() (*event.Event, error) {
 	err := json.Unmarshal([]byte(*m.Msg.Body), &event)
 	if err != nil {
 		log.Error(err.Error())
-		m.Visibility()
+		m.Delete()
 		return nil, err
 	}
 	return event, nil
@@ -32,6 +32,7 @@ func (m Message) Body() (*event.Event, error) {
 
 // Delete the message
 func (m Message) Delete() error {
+	log.Infof("Deleting mesage %s", m.Msg.MessageId)
 	_, err := m.SQS.DeleteMessage(&sqs.DeleteMessageInput{
 		QueueUrl:      &m.Base.Config.AwsSqsQueueURL,
 		ReceiptHandle: m.Msg.ReceiptHandle,
@@ -45,6 +46,7 @@ func (m Message) Delete() error {
 
 // Visibility set configured error visibility timeout
 func (m Message) Visibility() error {
+	log.Infof("Updating visibility for mesage %s", m.Msg.MessageId)
 	_, err := m.SQS.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
 		QueueUrl:          &m.Base.Config.AwsSqsQueueURL,
 		ReceiptHandle:     m.Msg.ReceiptHandle,

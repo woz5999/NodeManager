@@ -10,4 +10,6 @@ const (
 	UserAgentBase = "LogicMonitor NodeMan/"
 	// InstanceTerminating is the string indicating an AWS ASG terminate action
 	InstanceTerminating = "autoscaling:EC2_INSTANCE_TERMINATING"
+	// AsgContinue ASG continue action
+	AsgActionContinue = "CONTINUE"
 )

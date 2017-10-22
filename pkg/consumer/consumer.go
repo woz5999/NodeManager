@@ -14,11 +14,13 @@ import (
 	"github.com/woz5999/NodeManager/pkg/types"
 )
 
+// Consumer a consumer worker thread
 type Consumer struct {
 	Base *types.Base
 	Svc  *sqs.SQS
 }
 
+// Start start the worker thread
 func (c Consumer) Start(ctx context.Context) error {
 	ticker := time.Tick(1 * time.Second)
 	go func() {

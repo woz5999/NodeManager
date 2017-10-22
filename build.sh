@@ -1,1 +1,1 @@
-docker build --no-cache -t woz5999/node-manager:latest .
+docker build -t woz5999/node-manager:latest .

@@ -16,6 +16,7 @@ import (
 	"github.com/woz5999/NodeManager/pkg/types"
 )
 
+// NodeMan struct
 type NodeMan struct {
 	*types.Base
 }

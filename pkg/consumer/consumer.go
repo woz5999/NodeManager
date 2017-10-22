@@ -15,10 +15,10 @@ import (
 
 // Consumer a consumer worker thread
 type Consumer struct {
+	ASG   *autoscaling.AutoScaling
 	Base  *types.Base
 	EC2   *ec2.EC2
 	Queue *queue.Queue
-	ASG   *autoscaling.AutoScaling
 }
 
 // Start start the worker thread
@@ -35,7 +35,7 @@ func (c Consumer) Start(ctx context.Context) error {
 				}
 
 				if msg == nil {
-					log.Info("No message in queue")
+					log.Info("No messages in queue")
 					continue
 				}
 
@@ -57,8 +57,8 @@ func (c Consumer) Start(ctx context.Context) error {
 
 				// create node struct from the ec2 id in the parsed message
 				n := &node.Node{
-					EC2InstanceID: event.EC2InstanceID,
 					EC2:           c.EC2,
+					EC2InstanceID: event.EC2InstanceID,
 				}
 
 				err = n.Drain()

@@ -9,8 +9,8 @@ import (
 
 // Queue an SQS queue wrapper
 type Queue struct {
-	SQS  sqs.SQS
 	Base *types.Base
+	SQS  sqs.SQS
 }
 
 func (q Queue) Read() (*Message, error) {

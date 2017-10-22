@@ -12,9 +12,9 @@ import (
 
 // Message an SQS message wrapper
 type Message struct {
+	Base *types.Base
 	Msg  *sqs.Message
 	SQS  sqs.SQS
-	Base *types.Base
 }
 
 // Body return the message event body

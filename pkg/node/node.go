@@ -11,12 +11,9 @@ import (
 
 // Node an EC2 node that needs to be drained
 type Node struct {
-	EC2InstanceID string
 	EC2           *ec2.EC2
-	kubectl       *kubectl.Kubectl
+	EC2InstanceID string
 	instance      ec2.Instance
-	privateIP     string
-	publicIP      string
 }
 
 // Drain all pods from the node using its aws private hostname
@@ -28,7 +25,8 @@ func (n Node) Drain() error {
 	}
 
 	log.Infof("Draining node %s", hostname)
-	err = n.kubectl.Exec([]string{"drain", hostname, "--force"})
+	k := &kubectl.Kubectl{}
+	err = k.Exec([]string{"drain", hostname, "--force"})
 	if err != nil {
 		log.Error(err.Error())
 		return err

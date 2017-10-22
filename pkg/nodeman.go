@@ -55,9 +55,9 @@ func (nm *NodeMan) Watch() {
 
 	handleInterrupt(cancelCtx)
 
-	sqsSvc := sqs.New(nm.AwsSess)
-	ec2Svc := ec2.New(nm.AwsSess)
 	asgSvc := autoscaling.New(nm.AwsSess)
+	ec2Svc := ec2.New(nm.AwsSess)
+	sqsSvc := sqs.New(nm.AwsSess)
 
 	queue := &queue.Queue{
 		SQS:  *sqsSvc,
@@ -67,10 +67,10 @@ func (nm *NodeMan) Watch() {
 	// start consumer threads
 	for i := 0; i <= nm.Config.ConsumerThreads; i++ {
 		consumer := consumer.Consumer{
+			ASG:   asgSvc,
 			Base:  nm.Base,
 			EC2:   ec2Svc,
 			Queue: queue,
-			ASG:   asgSvc,
 		}
 		log.Infof("Starting thread %s", string(i))
 		err := consumer.Start(initialCtx)

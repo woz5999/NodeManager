@@ -2,9 +2,9 @@ package event
 
 // Event an AWS ASG scaling event message body
 type Event struct {
-	EC2InstanceID        string `json:"EC2InstanceId"`
 	AccountID            string `json:"AccountId"`
 	AutoScalingGroupName string `json:"AutoScalingGroupName"`
+	EC2InstanceID        string `json:"EC2InstanceId"`
 	LifecycleActionToken string `json:"LifecycleActionToken"`
 	LifecycleHookName    string `json:"LifecycleHookName"`
 	LifecycleTransition  string `json:"LifecycleTransition"`

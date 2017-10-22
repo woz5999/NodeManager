@@ -9,10 +9,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	log "github.com/sirupsen/logrus"
 	"github.com/woz5999/NodeManager/pkg/config"
 	"github.com/woz5999/NodeManager/pkg/consumer"
+	"github.com/woz5999/NodeManager/pkg/queue"
 	"github.com/woz5999/NodeManager/pkg/types"
 )
 
@@ -52,16 +54,25 @@ func (nm *NodeMan) Watch() {
 
 	handleInterrupt(cancelCtx)
 
-	// init sqs queue
-	svc := sqs.New(nm.AwsSess)
+	// init sqs svc
+	sqsSvc := sqs.New(nm.AwsSess)
+
+	// init ec2 svc
+	ec2Svc := ec2.New(nm.AwsSess)
+
+	queue := &queue.Queue{
+		SQS:  *sqsSvc,
+		Base: nm.Base,
+	}
 
 	// start consumer threads
 	for i := 0; i <= nm.Config.ConsumerThreads; i++ {
 		consumer := consumer.Consumer{
-			Base: nm.Base,
-			Svc:  svc,
+			Base:  nm.Base,
+			EC2:   ec2Svc,
+			Queue: queue,
 		}
-		log.Info("Starting thread " + string(i))
+		log.Infof("Starting thread %s", string(i))
 		err := consumer.Start(initialCtx)
 		if err != nil {
 			log.Error(err.Error())

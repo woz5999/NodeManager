@@ -1,38 +1,42 @@
 package node
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	log "github.com/sirupsen/logrus"
 	"github.com/woz5999/NodeManager/pkg/kubectl"
-	"github.com/woz5999/NodeManager/pkg/types"
 )
 
 // Node an EC2 node that needs to be drained
 type Node struct {
 	EC2InstanceID string
-	*types.Base
-	kubectl   *kubectl.Kubectl
-	instance  ec2.Instance
-	privateIP string
-	publicIP  string
+	EC2           *ec2.EC2
+	kubectl       *kubectl.Kubectl
+	instance      ec2.Instance
+	privateIP     string
+	publicIP      string
 }
 
-// Drain all pods from the node using public and/or private ip as node name
+// Drain all pods from the node using its aws private hostname
 func (n Node) Drain() error {
-	err := n.initInstance()
+	hostname, err := n.PrivateHostname()
 	if err != nil {
 		log.Error(err.Error())
 		return err
 	}
-	n.drain(*n.instance.PublicIpAddress)
-	n.drain(*n.instance.PrivateIpAddress)
+
+	log.Infof("Draining node %s", hostname)
+	err = n.kubectl.Exec([]string{"drain", hostname, "--force"})
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
 	return nil
 }
 
 func (n Node) initInstance() error {
-	svc := ec2.New(n.Base.AwsSess)
-
 	params := &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
@@ -44,21 +48,35 @@ func (n Node) initInstance() error {
 		},
 		MaxResults: aws.Int64(1),
 	}
+	res, _ := n.EC2.DescribeInstances(params)
 
-	res, _ := svc.DescribeInstances(params)
-
-	for _, i := range res.Reservations[0].Instances {
-		n.instance = *i
+	switch {
+	case len(res.Reservations[0].Instances) == 1:
+		log.Info("Found instance with ID %s", n.EC2InstanceID)
+		n.instance = *res.Reservations[0].Instances[0]
+	case len(res.Reservations[0].Instances) > 1:
+		log.Errorf("Too many instances found with ID %s", n.EC2InstanceID)
+		return fmt.Errorf("Too many instances found with ID %s", n.EC2InstanceID)
+	default:
+		log.Errorf("No instances found with ID %s", n.EC2InstanceID)
+		return fmt.Errorf("No instances found with ID %s", n.EC2InstanceID)
 	}
 	return nil
 }
 
-func (n Node) drain(node string) error {
-	log.Info("Draining node " + node + " with EC2 ID " + n.EC2InstanceID)
-	err := n.kubectl.Exec([]string{"drain", node, "--force"})
-	if err != nil {
-		log.Error(err.Error())
-		return err
+// PrivateHostname the EC2 instance's private hostname
+func (n Node) PrivateHostname() (string, error) {
+	if &n.instance == nil {
+		err := n.initInstance()
+		if err != nil {
+			log.Error(err.Error())
+			return "", err
+		}
 	}
-	return nil
+
+	if &n.instance == nil {
+		log.Errorf("Unknown error retrieving hostname. Instance %s not defined", n.EC2InstanceID)
+		return "", fmt.Errorf("Unknown error retrieving hostname. Instance %s not defined", n.EC2InstanceID)
+	}
+	return *n.instance.PrivateDnsName, nil
 }

@@ -12,6 +12,7 @@ type Config struct {
 	ConsumerThreads             int    `envconfig:"CONSUMER_THREADS" default:"5"`
 	ErrorVisibilityTimeoutSec   int64  `envconfig:"ERROR_VISIBILITY_TIMEOUT_SEC" default:"60"`
 	DefaultVisibilityTimeoutSec int64  `envconfig:"DEFAULT_VISIBILITY_TIMEOUT_SEC" default:"300"`
+	QueueWaitTimeSec            int64  `envconfig:"QUEUE_WAIT_TIME_SEC" default:"5"`
 }
 
 // GetConfig returns the application configuration specified by the config file.

@@ -6,7 +6,7 @@ import (
 
 // Config represents the application's configuration file.
 type Config struct {
-	Debug                       bool   `envconfig:"DEBUG" required:"true"`
+	Debug                       bool   `envconfig:"DEBUG"`
 	AwsRegion                   string `envconfig:"AWS_REGION" required:"true"`
 	AwsSqsQueueURL              string `envconfig:"AWS_SQS_QUEUE_URL" required:"true"`
 	ConsumerThreads             int    `envconfig:"CONSUMER_THREADS" default:"5"`

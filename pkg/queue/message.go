@@ -32,7 +32,7 @@ func (m Message) Body() (*event.Event, error) {
 
 // Delete the message
 func (m Message) Delete() error {
-	log.Infof("Deleting mesage %s", m.Msg.MessageId)
+	log.Infof("Deleting mesage %s", string(*m.Msg.MessageId))
 	_, err := m.SQS.DeleteMessage(&sqs.DeleteMessageInput{
 		QueueUrl:      &m.Base.Config.AwsSqsQueueURL,
 		ReceiptHandle: m.Msg.ReceiptHandle,
@@ -46,7 +46,7 @@ func (m Message) Delete() error {
 
 // Visibility set configured error visibility timeout
 func (m Message) Visibility() error {
-	log.Infof("Updating visibility for mesage %s", m.Msg.MessageId)
+	log.Infof("Updating visibility for message %s", string(*m.Msg.MessageId))
 	_, err := m.SQS.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
 		QueueUrl:          &m.Base.Config.AwsSqsQueueURL,
 		ReceiptHandle:     m.Msg.ReceiptHandle,

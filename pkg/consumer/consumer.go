@@ -48,7 +48,7 @@ func (c Consumer) Start(ctx context.Context) error {
 
 				// determine if we care about this event
 				if event.LifecycleTransition != constants.InstanceTerminating {
-					log.Infof("Received lifecycle transition %s. Ignoring...", string(event.LifecycleTransition))
+					log.Infof("Received lifecycle transition %s. Ignoring...", event.LifecycleTransition)
 					err = msg.Delete()
 					if err != nil {
 						log.Error(err.Error())
@@ -71,6 +71,11 @@ func (c Consumer) Start(ctx context.Context) error {
 					log.Error(err.Error())
 					msg.Visibility()
 					continue
+				}
+
+        err = n.Delete()
+				if err != nil {
+					log.Info(err.Error())
 				}
 
 				err = msg.Delete()

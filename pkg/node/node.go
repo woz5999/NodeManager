@@ -2,6 +2,7 @@ package node
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -13,7 +14,7 @@ import (
 type Node struct {
 	EC2           *ec2.EC2
 	EC2InstanceID string
-	instance      ec2.Instance
+	hostname      string
 }
 
 // Drain all pods from the node using its aws private hostname
@@ -26,7 +27,7 @@ func (n Node) Drain() error {
 
 	log.Infof("Draining node %s", hostname)
 	k := &kubectl.Kubectl{}
-	err = k.Exec([]string{"drain", hostname, "--force"})
+	err = k.Exec([]string{"drain", hostname})
 	if err != nil {
 		log.Error(err.Error())
 		return err
@@ -34,47 +35,75 @@ func (n Node) Drain() error {
 	return nil
 }
 
-func (n Node) initInstance() error {
+// Delete the node from the cluster
+func (n Node) Delete() error {
+	hostname, err := n.PrivateHostname()
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
+	log.Infof("Deleting node %s", hostname)
+	k := &kubectl.Kubectl{}
+	err = k.Exec([]string{"delete", hostname, "--force"})
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	return nil
+}
+
+func (n Node) instance() (*ec2.Instance, error) {
+	log.Infof("Retrieving EC2 information for Instance ID %s", n.EC2InstanceID)
 	params := &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
-				Name: aws.String("instance-id "),
+				Name: aws.String("instance-id"),
 				Values: []*string{
 					aws.String(n.EC2InstanceID),
 				},
 			},
 		},
-		MaxResults: aws.Int64(1),
 	}
-	res, _ := n.EC2.DescribeInstances(params)
+	res, err := n.EC2.DescribeInstances(params)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
 
 	switch {
-	case len(res.Reservations[0].Instances) == 1:
-		log.Info("Found instance with ID %s", n.EC2InstanceID)
-		n.instance = *res.Reservations[0].Instances[0]
+	case len(res.Reservations[0].Instances) < 1:
+		log.Errorf("No instances found with ID %s", n.EC2InstanceID)
+		return nil, fmt.Errorf("No instances found with ID %s", n.EC2InstanceID)
 	case len(res.Reservations[0].Instances) > 1:
 		log.Errorf("Too many instances found with ID %s", n.EC2InstanceID)
-		return fmt.Errorf("Too many instances found with ID %s", n.EC2InstanceID)
+		return nil, fmt.Errorf("Too many instances found with ID %s", n.EC2InstanceID)
 	default:
-		log.Errorf("No instances found with ID %s", n.EC2InstanceID)
-		return fmt.Errorf("No instances found with ID %s", n.EC2InstanceID)
+		log.Infof("Found instance with ID %s", n.EC2InstanceID)
+		return res.Reservations[0].Instances[0], nil
 	}
-	return nil
 }
 
 // PrivateHostname the EC2 instance's private hostname
 func (n Node) PrivateHostname() (string, error) {
-	if &n.instance == nil {
-		err := n.initInstance()
-		if err != nil {
-			log.Error(err.Error())
-			return "", err
-		}
+	if n.hostname != "" {
+		return n.hostname, nil
 	}
 
-	if &n.instance == nil {
-		log.Errorf("Unknown error retrieving hostname. Instance %s not defined", n.EC2InstanceID)
-		return "", fmt.Errorf("Unknown error retrieving hostname. Instance %s not defined", n.EC2InstanceID)
+	i, err := n.instance()
+	if err != nil {
+		log.Error(err.Error())
+		return "", err
 	}
-	return *n.instance.PrivateDnsName, nil
+
+	n.hostname = n.formatHostname(*i.PrivateDnsName)
+	log.Infof("Found instance private hostname %s", n.hostname)
+	return n.hostname, nil
+}
+
+func (n Node) formatHostname(hostname string) string {
+	// turn ip-10-35-120-96.us-west-1.ec2.internal
+	// into ip-10-35-120-96.us-west-1.compute.internal
+	var re = regexp.MustCompile(`(ec2)`)
+	return re.ReplaceAllString(hostname, `compute`)
 }

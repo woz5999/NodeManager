@@ -61,6 +61,7 @@ func (nm *NodeMan) Watch() {
 			Base: nm.Base,
 			Svc:  svc,
 		}
+		log.Info("Starting thread " + string(i))
 		err := consumer.Start(initialCtx)
 		if err != nil {
 			log.Error(err.Error())
@@ -79,7 +80,7 @@ func handleInterrupt(cancelCtx context.CancelFunc) {
 	go func() {
 		for sig := range c {
 			// got sig int
-			log.Printf("Caught sig %v..  exiting...", sig)
+			log.Errorf("Caught sig %v..  exiting...", sig)
 			log.Info("Cancelling context...")
 			cancelCtx()
 			log.Info("Waiting a sec to facilitate cleanup..")

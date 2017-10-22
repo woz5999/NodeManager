@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/autoscaling"
@@ -54,6 +55,10 @@ func (c Consumer) Start(ctx context.Context) error {
 					}
 					continue
 				}
+
+				log.Infof("Received autoscaling lifecycle termination event: ")
+				s, _ := json.MarshalIndent(event, "", "  ")
+				log.Infof("%s", string(s))
 
 				// create node struct from the ec2 id in the parsed message
 				n := &node.Node{

@@ -12,7 +12,7 @@ type Kubectl struct{}
 // Exec run a kubectl command
 func (k Kubectl) Exec(args []string) error {
 	cmd := exec.Command("kubectl", args...)
-	log.Info("Running command ")
+	log.Info("Running command %v", args)
 	err := cmd.Run()
 	if err != nil {
 		log.Error(err.Error())

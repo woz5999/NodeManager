@@ -5,4 +5,4 @@ RUN curl -L https://storage.googleapis.com/kubernetes-release/release/${KUBERNET
     && chmod +x /usr/local/bin/kubectl
 
 
-EXPOSE 80
+EXPOSE 8080

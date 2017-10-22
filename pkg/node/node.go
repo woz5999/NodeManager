@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/woz5999/NodeManager/pkg/kubectl"
 	"github.com/woz5999/NodeManager/pkg/types"
-	// "k8s.io/client-go/pkg/api/v1"
 )
 
 type Node struct {

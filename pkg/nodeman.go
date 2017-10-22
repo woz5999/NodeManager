@@ -12,11 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	log "github.com/sirupsen/logrus"
 	"github.com/woz5999/NodeManager/pkg/config"
-	"github.com/woz5999/NodeManager/pkg/constants"
 	"github.com/woz5999/NodeManager/pkg/consumer"
 	"github.com/woz5999/NodeManager/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 type NodeMan struct {
@@ -30,16 +27,9 @@ func NewBase(config *config.Config) (*types.Base, error) {
 		Region: aws.String(config.AwsRegion),
 	}))
 
-	// Kubernetes API client.
-	k8sClient, err := newK8sClient()
-	if err != nil {
-		return nil, err
-	}
-
 	base := &types.Base{
-		AwsSess:   awsSess,
-		K8sClient: k8sClient,
-		Config:    config,
+		AwsSess: awsSess,
+		Config:  config,
 	}
 
 	return base, nil
@@ -52,22 +42,6 @@ func NewNodeMan(base *types.Base) (*NodeMan, error) {
 	}
 
 	return nodeman, nil
-}
-
-func newK8sClient() (*kubernetes.Clientset, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	config.UserAgent = constants.UserAgentBase + constants.Version
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientset, nil
 }
 
 // Watch watches the SQS Queue for messages to remove nodes.

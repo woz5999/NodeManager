@@ -7,8 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/woz5999/NodeManager/pkg"
-	healthz "github.com/woz5999/NodeManager/pkg/Healthz"
 	config "github.com/woz5999/NodeManager/pkg/config"
+	healthz "github.com/woz5999/NodeManager/pkg/healthz"
 )
 
 func main() {

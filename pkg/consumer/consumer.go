@@ -1,22 +1,23 @@
 package consumer
 
 import (
-  "context"
-  "encoding/json"
-  "github.com/aws/aws-sdk-go/aws"
-  "github.com/aws/aws-sdk-go/service/sqs"
-  "github.com/woz5999/NodeManager/pkg/constants"
-  "github.com/woz5999/NodeManager/pkg/event"
-  "github.com/woz5999/NodeManager/pkg/node"
-  "github.com/woz5999/NodeManager/pkg/types"
-  "time"
-  log "github.com/sirupsen/logrus"
+	"context"
+	"encoding/json"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/sqs"
+	log "github.com/sirupsen/logrus"
+	"github.com/woz5999/NodeManager/pkg/constants"
+	"github.com/woz5999/NodeManager/pkg/event"
+	"github.com/woz5999/NodeManager/pkg/node"
+	"github.com/woz5999/NodeManager/pkg/types"
 )
 
 type Consumer struct {
-  Base *types.Base
-  Svc *sqs.SQS
-  AwsSqsQueueURL string
+	Base           *types.Base
+	Svc            *sqs.SQS
+	AwsSqsQueueURL string
 }
 
 func (c Consumer) Start(ctx context.Context) error {
@@ -50,7 +51,7 @@ func (c Consumer) Start(ctx context.Context) error {
 				}
 
 				// process message
-        msg := result.Messages[0]
+				msg := result.Messages[0]
 				event := event.Event{}
 				err = json.Unmarshal([]byte(*msg.Body), &event)
 				if err != nil {
@@ -59,14 +60,14 @@ func (c Consumer) Start(ctx context.Context) error {
 					break
 				}
 
-        // determine if we care about this event
+				// determine if we care about this event
 				if event.LifecycleTransition != constants.InstanceTerminating {
 					log.Info("Received lifecycle transition " + string(event.LifecycleTransition) + ". Ignoring...")
-          err = c.deleteMessage(msg)
-          if err != nil {
-            log.Error(err.Error())
-          }
-          break
+					err = c.deleteMessage(msg)
+					if err != nil {
+						log.Error(err.Error())
+					}
+					break
 				}
 
 				// create node struct from the ec2 id in the parsed message
@@ -75,17 +76,17 @@ func (c Consumer) Start(ctx context.Context) error {
 					EC2InstanceID: event.EC2InstanceID,
 				}
 
-				err = n.Terminate()
+				err = n.Drain()
 				if err != nil {
 					log.Error(err.Error())
 					c.errorVisibility(msg)
 					break
 				}
 
-        err = c.deleteMessage(msg)
-        if err != nil {
-          log.Error(err.Error())
-        }
+				err = c.deleteMessage(msg)
+				if err != nil {
+					log.Error(err.Error())
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -95,17 +96,17 @@ func (c Consumer) Start(ctx context.Context) error {
 }
 
 func (c Consumer) deleteMessage(msg *sqs.Message) error {
-  _, err := c.Svc.DeleteMessage(&sqs.DeleteMessageInput{
-    QueueUrl:      &c.AwsSqsQueueURL,
-    ReceiptHandle: msg.ReceiptHandle,
-  })
-  if err != nil {
-    log.Error(err.Error())
-    return err
-  }
-  return nil
+	_, err := c.Svc.DeleteMessage(&sqs.DeleteMessageInput{
+		QueueUrl:      &c.AwsSqsQueueURL,
+		ReceiptHandle: msg.ReceiptHandle,
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	return nil
 }
 
 func (c Consumer) errorVisibility(msg *sqs.Message) error {
-  return nil
+	return nil
 }

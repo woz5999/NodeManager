@@ -72,7 +72,7 @@ func (nm *NodeMan) Watch() {
 			EC2:   ec2Svc,
 			Queue: queue,
 		}
-		log.Infof("Starting thread %s", string(i))
+		log.Infof("Starting thread %v", i)
 		err := consumer.Start(initialCtx)
 		if err != nil {
 			log.Error(err.Error())

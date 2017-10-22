@@ -2,6 +2,10 @@ package nodeman
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -68,8 +72,10 @@ func newK8sClient() (*kubernetes.Clientset, error) {
 
 // Watch watches the SQS Queue for messages to remove nodes.
 func (nm *NodeMan) Watch() {
-	initialCtx, _ := context.WithCancel(context.Background())
+	initialCtx, cancelCtx := context.WithCancel(context.Background())
 	log.Info("Initializing global context")
+
+	handleInterrupt(cancelCtx)
 
 	// init sqs queue
 	svc := sqs.New(nm.AwsSess)
@@ -77,15 +83,34 @@ func (nm *NodeMan) Watch() {
 	// start consumer threads
 	for i := 0; i <= nm.Config.ConsumerThreads; i++ {
 		consumer := consumer.Consumer{
-			Base:           nm.Base,
-			Svc:            svc,
-			AwsSqsQueueURL: nm.Config.AwsSqsQueueURL,
+			Base: nm.Base,
+			Svc:  svc,
 		}
 		err := consumer.Start(initialCtx)
 		if err != nil {
 			log.Error(err.Error())
+			cancelCtx()
 		}
 	}
 
 	<-initialCtx.Done()
+}
+
+func handleInterrupt(cancelCtx context.CancelFunc) {
+	// cleanly handle sig int
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+	go func() {
+		for sig := range c {
+			// got sig int
+			log.Printf("Caught sig %v..  exiting...", sig)
+			log.Info("Cancelling context...")
+			cancelCtx()
+			log.Info("Waiting a sec to facilitate cleanup..")
+			time.Sleep(time.Second)
+			log.Info("Exiting")
+			os.Exit(1)
+		}
+	}()
 }

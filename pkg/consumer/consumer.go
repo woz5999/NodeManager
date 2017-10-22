@@ -15,9 +15,8 @@ import (
 )
 
 type Consumer struct {
-	Base           *types.Base
-	Svc            *sqs.SQS
-	AwsSqsQueueURL string
+	Base *types.Base
+	Svc  *sqs.SQS
 }
 
 func (c Consumer) Start(ctx context.Context) error {
@@ -33,9 +32,9 @@ func (c Consumer) Start(ctx context.Context) error {
 					MessageAttributeNames: []*string{
 						aws.String(sqs.QueueAttributeNameAll),
 					},
-					QueueUrl:            &c.AwsSqsQueueURL,
+					QueueUrl:            &c.Base.Config.AwsSqsQueueURL,
 					MaxNumberOfMessages: aws.Int64(1),
-					VisibilityTimeout:   aws.Int64(300), // 5 minutes
+					VisibilityTimeout:   aws.Int64(c.Base.Config.ErrorVisibilityTimeoutSec),
 					WaitTimeSeconds:     aws.Int64(0),
 				})
 
@@ -56,7 +55,7 @@ func (c Consumer) Start(ctx context.Context) error {
 				err = json.Unmarshal([]byte(*msg.Body), &event)
 				if err != nil {
 					log.Error(err.Error())
-					c.errorVisibility(msg)
+					c.updateVisibility(msg)
 					break
 				}
 
@@ -79,7 +78,7 @@ func (c Consumer) Start(ctx context.Context) error {
 				err = n.Drain()
 				if err != nil {
 					log.Error(err.Error())
-					c.errorVisibility(msg)
+					c.updateVisibility(msg)
 					break
 				}
 
@@ -97,7 +96,7 @@ func (c Consumer) Start(ctx context.Context) error {
 
 func (c Consumer) deleteMessage(msg *sqs.Message) error {
 	_, err := c.Svc.DeleteMessage(&sqs.DeleteMessageInput{
-		QueueUrl:      &c.AwsSqsQueueURL,
+		QueueUrl:      &c.Base.Config.AwsSqsQueueURL,
 		ReceiptHandle: msg.ReceiptHandle,
 	})
 	if err != nil {
@@ -107,6 +106,15 @@ func (c Consumer) deleteMessage(msg *sqs.Message) error {
 	return nil
 }
 
-func (c Consumer) errorVisibility(msg *sqs.Message) error {
+func (c Consumer) updateVisibility(msg *sqs.Message) error {
+	_, err := c.Svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
+		QueueUrl:          &c.Base.Config.AwsSqsQueueURL,
+		ReceiptHandle:     msg.ReceiptHandle,
+		VisibilityTimeout: aws.Int64(c.Base.Config.ErrorVisibilityTimeoutSec),
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
 	return nil
 }
